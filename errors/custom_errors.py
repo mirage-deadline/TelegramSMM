@@ -1,0 +1,2 @@
+class ZeroAttemtsLeftError(Exception):
+    pass
