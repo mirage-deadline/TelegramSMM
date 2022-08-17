@@ -40,6 +40,7 @@ class PyrogramClient:
             chanels = [chanels,]
         for chanel in chanels:
             await self.client.join_chat(chanel)
+        return self
         
     async def left_channel(self, chanels: Union[list[str], str]):
         """Left client to channel
@@ -74,15 +75,10 @@ class PyrogramClient:
         """
         files_storage = Path(__file__).parent.parent / 'chat_members_data' / str(datetime.now().date())
         self.storage_members_path = os.path.join(files_storage, f'{chat_id}.json')
-        if os.path.exists(self.storage_members_path):
-            return self._load_from_static(self.storage_members_path)
-        else:
+        if not os.path.exists(self.storage_members_path):
             Path(files_storage).mkdir(parents=True, exist_ok=True)
-            return await self._load_new_data(chat_id)
+        return await self._load_new_data(chat_id)
 
-    async def update_mutual_contacts(self, chat_id):
-        await self.client.get_chat_members(chat_id)
-        
     @staticmethod
     def _load_from_static(path_to_file: Path) -> list:
         """Load from local cache
@@ -104,21 +100,22 @@ class PyrogramClient:
         all_data = []
         member: ChatMember
         async for member in members_list:
-            all_data.append({
-                'status': member.status.value,
-                'user_meta': {
-                    'user_id': member.user.id,
-                    'is_self': member.user.is_self,
-                    'is_contact': member.user.is_contact,
-                    'status': member.user.status.value if member.user.status else None,
-                    'username': member.user.username,
-                    'last_name': member.user.last_name,
-                    'is_premium': member.user.is_premium,
-                    'is_sapport': member.user.is_support,
-                    'is_bot': member.user.is_bot,
-                    'is_verified': member.user.is_verified
-                }
-            })
+            if member.user.username not in ('yaskravviy', 'kurgan_smp', 'evdokiya_mr'):
+                all_data.append({
+                    'status': member.status.value,
+                    'user_meta': {
+                        'user_id': member.user.id,
+                        'is_self': member.user.is_self,
+                        'is_contact': member.user.is_contact,
+                        'status': member.user.status.value if member.user.status else None,
+                        'username': member.user.username,
+                        'last_name': member.user.last_name,
+                        'is_premium': member.user.is_premium,
+                        'is_sapport': member.user.is_support,
+                        'is_bot': member.user.is_bot,
+                        'is_verified': member.user.is_verified
+                    }
+                })
         with open(self.storage_members_path, 'w', encoding='utf-8') as f:
             json.dump(all_data, f, indent=4)
 

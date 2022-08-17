@@ -21,7 +21,7 @@ class ClientManager:
     async def upgrade_group_count(self):
 
         client_generator = self.clients_generator()
-        client = next(client_generator)
+        client = await (await next(client_generator).login()).join_channel([self.chat_from, self.chat_to])
         
         members = await self.get_members(client)
 
@@ -35,13 +35,13 @@ class ClientManager:
                 await client.invite_user_to_group(chat_id=self.chat_to, user_id=user_id)
                 success_invites += 1
                 logger.info(f'{user_id} -> ADDED. Total invited {success_invites}')
-            except PeerIdInvalid:
-                logger.error(f'Theory about same ids of my acc. {user_id}')
+            except PeerIdInvalid as pii:
+                logger.error(f'Theory about same ids of my acc. {user_id}. Exceptrion {pii}')
             except UserPrivacyRestricted as _ex:
                 logger.info(f'{user_id} -> Privicy policy not allowed to add him. {_ex}')
             except ZeroAttemtsLeftError:
-                client = next(client_generator)
-                await client.update_mutual_contacts(self.chat_from)
+                client = await (await next(client_generator).login()).join_channel([self.chat_from, self.chat_to])
+                await client.load_members_list(self.chat_from)
                 logger.info(f'New client activated {client.client_phone}')
             await asyncio.sleep(3)
             
@@ -62,7 +62,7 @@ class ClientManager:
         for client in self.clients:
             yield client
     
-    async def get_members(self, client: PyrogramClient, status_filter=['member', ], online_filter=('recently', 'online')):
+    async def get_members(self, client: PyrogramClient, status_filter=['member', ], online_filter=('recently', 'online', 'offline')):
         valid_data = []
         all_data = await client.load_members_list(self.chat_from)
         for row in all_data:
